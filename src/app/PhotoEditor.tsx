@@ -12,12 +12,12 @@ interface CroppedAreaPixels {
   height: number;
 }
 
-// Helper component for tooltips
+// Tooltip component with mobile support
 const Tooltip = ({ children, text }: { children: React.ReactNode; text: string }) => {
   return (
     <div className="group relative">
       {children}
-      <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-12 left-1/2 -translate-x-1/2 
+      <div className="hidden md:block opacity-0 group-hover:opacity-100 transition-opacity absolute -top-12 left-1/2 -translate-x-1/2 
                     px-3 py-2 bg-gray-900 text-white text-xs rounded-lg w-48 text-center pointer-events-none">
         {text}
         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
@@ -36,6 +36,7 @@ const PhotoEditor = () => {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<CroppedAreaPixels | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [finalImage, setFinalImage] = useState<string | null>(null);
+  const [showTouchControls, setShowTouchControls] = useState(true);
   const cropperRef = useRef<HTMLDivElement>(null);
 
   const formatDate = (date: Date): string => {
@@ -113,49 +114,70 @@ const PhotoEditor = () => {
       ctx.globalCompositeOperation = 'source-over';
     }
 
-    // Add date overlay with updated format
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.fillRect(10, canvas.height - 40, 150, 30);
+    // Add date overlay with updated format and larger size
+    const fontSize = Math.min(canvas.width * 0.05, 32); // Responsive font size
+    const padding = fontSize * 0.75;
+    const dateText = formatDate(selectedDate);
+    
+    ctx.font = `bold ${fontSize}px Arial`;
+    const textMetrics = ctx.measureText(dateText);
+    const textWidth = textMetrics.width;
+    
+    // Background rectangle with padding
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(
+      padding, 
+      canvas.height - (fontSize + padding * 2), 
+      textWidth + padding * 2, 
+      fontSize + padding * 2
+    );
+    
+    // Date text
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 16px Arial';
     ctx.fillText(
-      formatDate(selectedDate),
-      20,
-      canvas.height - 20
+      dateText,
+      padding * 2,
+      canvas.height - padding
     );
 
     setFinalImage(canvas.toDataURL('image/png'));
   }, [imageSrc, croppedAreaPixels, selectedDate, cropShape, rotation]);
 
   return (
-    <div className="flex flex-col gap-8 items-center w-full max-w-5xl mx-auto p-6">
-      {/* Upload Section */}
+    <div className="flex flex-col gap-4 md:gap-8 items-center w-full max-w-5xl mx-auto p-2 md:p-6">
+      {/* Mobile Header */}
+      <div className="w-full text-center md:hidden">
+        <h1 className="text-xl font-bold text-gray-800 mb-2">Photo Editor</h1>
+        <p className="text-sm text-gray-500">Edit, crop and add date to your photos</p>
+      </div>
+
+      {/* Upload Section - Enhanced for mobile */}
       <div className="w-full max-w-md text-center">
-        <div className="p-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors relative">
-          <Tooltip text="Click here to upload your image. We support JPG, PNG, and WebP formats">
-            <label className="block text-lg font-medium mb-4 cursor-pointer">
-              Upload Your Image
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={onFileChange}
-                className="w-full file:mr-4 file:py-2.5 file:px-6 file:rounded-full file:border-0 
-                         file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 
-                         hover:file:bg-blue-100 transition-all cursor-pointer" 
-              />
-            </label>
-          </Tooltip>
-          <p className="mt-2 text-sm text-gray-500">Supported formats: JPG, PNG, WebP</p>
+        <div className="relative p-4 md:p-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-800 transition-colors">
+          <input 
+            type="file" 
+            accept="image/*" 
+            onChange={onFileChange}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+          />
+          <div className="space-y-2">
+            <div className="flex justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-gray-700">Tap to upload image</p>
+            <p className="text-xs text-gray-500">JPG, PNG, WebP</p>
+          </div>
         </div>
       </div>
-      
+
       {imageSrc ? (
         <>
-          {/* Image Editor Section */}
           <div className="w-full bg-gray-50 rounded-xl shadow-lg overflow-hidden">
-            {/* Cropper Container with Instructions */}
+            {/* Cropper Container */}
             <div className="relative">
-              <div className="w-full max-w-4xl mx-auto aspect-[16/9] bg-gray-900">
+              <div className="w-full aspect-square md:aspect-[16/9] bg-gray-900">
                 <Cropper
                   image={imageSrc}
                   crop={crop}
@@ -171,208 +193,207 @@ const PhotoEditor = () => {
                   objectFit="contain"
                 />
               </div>
-              {/* Overlay Instructions */}
-              <div className="absolute top-4 left-4 bg-black/70 text-white px-4 py-2 rounded-lg text-sm pointer-events-none">
-                ⭐ Tips:
-                <ul className="mt-1 list-disc list-inside opacity-90">
-                  <li>Drag to move the crop area</li>
-                  <li>Scroll to zoom in/out</li>
-                  <li>Use controls below to adjust</li>
-                </ul>
-              </div>
-            </div>
 
-            {/* Controls Section with Tooltips */}
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left Column */}
-                <div className="space-y-6">
-                  <div>
-                    <Tooltip text="Choose between rectangular or circular crop shape for your image">
-                      <label className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Crop Shape</span>
-                        <span className="text-xs text-gray-500">{cropShape === 'rect' ? 'Rectangle' : 'Circle'}</span>
-                      </label>
-                    </Tooltip>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => setCropShape('rect')}
-                        className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${
-                          cropShape === 'rect' 
-                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        Rectangle
-                      </button>
-                      <button
-                        onClick={() => setCropShape('round')}
-                        className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${
-                          cropShape === 'round' 
-                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        Circle
-                      </button>
+              {/* Dismissible Touch Controls */}
+              {showTouchControls && (
+                <div 
+                  className="md:hidden fixed bottom-4 left-4 right-4 bg-black/90 backdrop-blur-sm text-white 
+                           px-4 py-3 rounded-2xl text-xs shadow-lg z-50 animate-fade-in"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400">✨</span>
+                      <span className="font-medium">Touch Controls</span>
+                    </div>
+                    <button 
+                      onClick={() => setShowTouchControls(false)}
+                      className="text-white/80 hover:text-white p-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div className="flex items-center gap-2 text-white/90">
+                      <span>👆</span>
+                      <span>Drag image</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-white/90">
+                      <span>🔄</span>
+                      <span>Rotate: 2 fingers</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-white/90">
+                      <span>👌</span>
+                      <span>Pinch to zoom</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-white/90">
+                      <span>✨</span>
+                      <span>Use buttons below</span>
                     </div>
                   </div>
-
-                  <div>
-                    <Tooltip text="Select a preset aspect ratio or use free-form cropping">
-                      <label className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Aspect Ratio</span>
-                        <span className="text-xs text-gray-500">
-                          {aspectRatio ? (aspectRatio === 1 ? '1:1' : aspectRatio > 1 ? 'Landscape' : 'Portrait') : 'Free'}
-                        </span>
-                      </label>
-                    </Tooltip>
-                    <select 
-                      value={aspectRatio || 'free'}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setAspectRatio(value === 'free' ? null : Number(value));
-                      }}
-                      className="w-full px-4 py-2.5 border rounded-lg bg-white hover:border-gray-300 transition-colors"
-                    >
-                      <option value="free">Free Form</option>
-                      <option value="1">Square (1:1)</option>
-                      <option value="1.7778">Landscape (16:9)</option>
-                      <option value="0.5625">Portrait (9:16)</option>
-                      <option value="1.3333">Classic (4:3)</option>
-                    </select>
-                  </div>
                 </div>
+              )}
 
-                {/* Right Column */}
-                <div className="space-y-6">
-                  <div>
-                    <Tooltip text="Adjust zoom level to focus on specific areas">
-                      <label className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Zoom</span>
-                        <span className="text-xs text-gray-500">{zoom.toFixed(1)}x</span>
-                      </label>
-                    </Tooltip>
-                    <input 
-                      type="range" 
-                      value={zoom} 
-                      min={1} 
-                      max={3} 
-                      step={0.1} 
-                      onChange={(e) => setZoom(Number(e.target.value))}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                  </div>
+              {/* Help Button (shows when instructions are dismissed) */}
+              {!showTouchControls && (
+                <button
+                  onClick={() => setShowTouchControls(true)}
+                  className="md:hidden fixed bottom-4 right-4 bg-black/90 text-white p-3 rounded-full shadow-lg z-50"
+                >
+                  <span className="text-lg">❔</span>
+                </button>
+              )}
+            </div>
 
-                  <div>
-                    <Tooltip text="Rotate your image to adjust the orientation">
-                      <label className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Rotation</span>
-                        <span className="text-xs text-gray-500">{rotation}°</span>
-                      </label>
-                    </Tooltip>
-                    <input 
-                      type="range" 
-                      value={rotation} 
-                      min={0} 
-                      max={360} 
-                      step={1} 
-                      onChange={(e) => setRotation(Number(e.target.value))}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                  </div>
-
-                  <div>
-                    <Tooltip text="Select the date to be added to your image (format: YYYY/MM/DD)">
-                      <label className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Date</span>
-                        <span className="text-xs text-gray-500">YYYY/MM/DD</span>
-                      </label>
-                    </Tooltip>
-                    <DatePicker
-                      selected={selectedDate}
-                      onChange={(date) => setSelectedDate(date)}
-                      dateFormat="yyyy/MM/dd"
-                      className="w-full px-4 py-2.5 border rounded-lg hover:border-gray-300 transition-colors"
-                    />
-                  </div>
-                </div>
+            {/* Mobile-optimized Controls */}
+            <div className="p-3 md:p-6">
+              {/* Quick Actions Bar */}
+              <div className="md:hidden flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+                <button
+                  onClick={() => setRotation(prev => (prev + 90) % 360)}
+                  className="flex-none px-4 py-2 bg-gray-100 rounded-full text-sm font-medium flex items-center gap-2"
+                >
+                  <span>🔄</span> Rotate
+                </button>
+                <button
+                  onClick={() => setZoom(prev => Math.min(prev + 0.1, 3))}
+                  className="flex-none px-4 py-2 bg-gray-100 rounded-full text-sm font-medium flex items-center gap-2"
+                >
+                  <span>🔍</span> Zoom
+                </button>
+                <button
+                  onClick={() => setZoom(1)}
+                  className="flex-none px-4 py-2 bg-gray-100 rounded-full text-sm font-medium flex items-center gap-2"
+                >
+                  <span>↩️</span> Reset
+                </button>
               </div>
 
-              {/* Action Buttons with Explanation */}
-              <div className="flex flex-col items-center mt-8">
-                <Tooltip text="Click to generate your final image with the date stamp">
-                  <button
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full
-                             transition-all text-lg font-medium shadow-lg hover:shadow-xl
-                             transform hover:-translate-y-0.5 active:translate-y-0"
-                    onClick={createFinalImage}
+              {/* Simplified Mobile Controls */}
+              <div className="space-y-4">
+                {/* Shape Controls */}
+                <div className="bg-gray-900 p-4 rounded-lg shadow-sm text-white">
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={() => setCropShape('rect')}
+                      className={`flex-1 py-3 rounded-lg border-2 transition-all flex items-center justify-center gap-2 ${
+                        cropShape === 'rect' 
+                          ? 'border-white bg-gray-800 text-white' 
+                          : 'border-gray-700 text-gray-400'
+                      }`}
+                    >
+                      <span>◻️</span>
+                      <span>Rectangle</span>
+                    </button>
+                    <button
+                      onClick={() => setCropShape('round')}
+                      className={`flex-1 py-3 rounded-lg border-2 transition-all flex items-center justify-center gap-2 ${
+                        cropShape === 'round' 
+                          ? 'border-white bg-gray-800 text-white' 
+                          : 'border-gray-700 text-gray-400'
+                      }`}
+                    >
+                      <span>⭕</span>
+                      <span>Circle</span>
+                    </button>
+                  </div>
+
+                  {/* Aspect Ratio */}
+                  <select 
+                    value={aspectRatio || 'free'}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setAspectRatio(value === 'free' ? null : Number(value));
+                    }}
+                    className="w-full py-3 px-4 border border-gray-700 rounded-lg bg-gray-800 text-white text-center appearance-none"
                   >
-                    Generate Image
-                  </button>
-                </Tooltip>
-                <p className="text-sm text-gray-500 mt-2">Click to apply your changes and add the date</p>
+                    <option value="free">Free Crop</option>
+                    <option value="1">Square (1:1)</option>
+                    <option value="1.7778">Landscape (16:9)</option>
+                    <option value="0.5625">Portrait (9:16)</option>
+                    <option value="1.3333">Classic (4:3)</option>
+                  </select>
+                </div>
+
+                {/* Date Picker - Mobile Optimized */}
+                <div className="bg-gray-900 p-4 rounded-lg shadow-sm">
+                  <DatePicker
+                    selected={selectedDate}
+                    onChange={(date) => setSelectedDate(date)}
+                    dateFormat="yyyy/MM/dd"
+                    className="w-full py-3 px-4 border rounded-lg text-center"
+                    wrapperClassName="w-full"
+                  />
+                </div>
+
+                {/* Generate Button */}
+                <button
+                  onClick={createFinalImage}
+                  className="w-full bg-gray-900 text-white py-4 rounded-xl text-lg font-medium
+                           active:scale-95 transition-transform flex items-center justify-center gap-2
+                           shadow-lg hover:bg-black"
+                >
+                  <span>✨</span>
+                  Generate Image
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Result Section */}
+          {/* Result Section - Mobile Optimized */}
           {finalImage && (
-            <div className="w-full max-w-2xl bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="w-full bg-white rounded-xl shadow-lg overflow-hidden">
               <div className="p-4">
                 <img 
                   src={finalImage} 
                   alt="Final" 
-                  className="w-full rounded-lg" 
+                  className="w-full rounded-lg shadow-sm" 
                 />
               </div>
-              <div className="p-4 bg-gray-50 border-t flex flex-col items-center">
-                <Tooltip text="Save your edited image to your device">
-                  <a
-                    href={finalImage}
-                    download={`photo_${selectedDate ? formatDate(selectedDate).replace(/\//g, '-') : 'edited'}.png`}
-                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-full
-                             transition-all text-base font-medium shadow-md hover:shadow-lg
-                             flex items-center gap-2 transform hover:-translate-y-0.5 active:translate-y-0"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                    Download Image
-                  </a>
-                </Tooltip>
-                <p className="text-sm text-gray-500 mt-2">Your image will be saved with the date stamp</p>
+              <div className="p-4 bg-gray-50 border-t">
+                <a
+                  href={finalImage}
+                  download={`photo_${selectedDate ? formatDate(selectedDate).replace(/\//g, '-') : 'edited'}.png`}
+                  className="w-full bg-green-600 text-white py-4 rounded-xl text-lg font-medium
+                           active:scale-95 transition-transform flex items-center justify-center gap-2
+                           shadow-lg"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                  Save Image
+                </a>
               </div>
             </div>
           )}
         </>
       ) : (
-        // Empty State with Instructions
-        <div className="text-center text-gray-500 max-w-md mx-auto">
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">How to Use</h2>
-            <ol className="text-left space-y-2 text-sm">
-              <li className="flex items-start gap-2">
-                <span className="font-bold">1.</span>
-                <span>Upload your image using the button above</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="font-bold">2.</span>
-                <span>Adjust the crop area, rotation, and zoom as needed</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="font-bold">3.</span>
-                <span>Choose your preferred crop shape and aspect ratio</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="font-bold">4.</span>
-                <span>Select the date to add to your image</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="font-bold">5.</span>
-                <span>Generate and download your finished image</span>
-              </li>
-            </ol>
+        // Enhanced Empty State for Mobile
+        <div className="text-center text-gray-500 max-w-md mx-auto p-4">
+          <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
+            <div className="flex justify-center mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-300" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-700">Get Started</h2>
+            <div className="space-y-3 text-left">
+              <div className="flex items-center gap-3">
+                <span className="flex-none w-8 h-8 bg-gray-100 text-gray-900 rounded-full flex items-center justify-center">1</span>
+                <span>Upload your photo</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="flex-none w-8 h-8 bg-gray-100 text-gray-900 rounded-full flex items-center justify-center">2</span>
+                <span>Adjust the crop area</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="flex-none w-8 h-8 bg-gray-100 text-gray-900 rounded-full flex items-center justify-center">3</span>
+                <span>Choose shape & date</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="flex-none w-8 h-8 bg-gray-100 text-gray-900 rounded-full flex items-center justify-center">4</span>
+                <span>Generate & save</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
