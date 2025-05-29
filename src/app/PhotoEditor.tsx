@@ -177,7 +177,17 @@ const PhotoEditor = () => {
           <div className="w-full bg-gray-50 rounded-xl shadow-lg overflow-hidden">
             {/* Cropper Container */}
             <div className="relative">
-              <div className="w-full aspect-square md:aspect-[16/9] bg-gray-900">
+              <div className="w-full aspect-square md:aspect-[16/9] bg-[#1a1a1a] bg-opacity-90 relative overflow-hidden">
+                {/* Checkerboard pattern background */}
+                <div className="absolute inset-0 grid grid-cols-8 grid-rows-8">
+                  {Array(64).fill(0).map((_, i) => (
+                    <div key={i} className={`${
+                      (Math.floor(i / 8) + i % 8) % 2 === 0 
+                        ? 'bg-gray-800' 
+                        : 'bg-gray-900'
+                    } opacity-50`}></div>
+                  ))}
+                </div>
                 <Cropper
                   image={imageSrc}
                   crop={crop}
@@ -191,6 +201,18 @@ const PhotoEditor = () => {
                   cropShape={cropShape}
                   showGrid={true}
                   objectFit="contain"
+                  style={{
+                    containerStyle: {
+                      background: 'transparent',
+                    },
+                    mediaStyle: {
+                      boxShadow: '0 0 10px rgba(0, 0, 0, 0.5)',
+                    },
+                    cropAreaStyle: {
+                      border: '2px solid white',
+                      boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7)',
+                    }
+                  }}
                 />
               </div>
 
@@ -247,25 +269,40 @@ const PhotoEditor = () => {
             {/* Mobile-optimized Controls */}
             <div className="p-3 md:p-6">
               {/* Quick Actions Bar */}
-              <div className="md:hidden flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
-                <button
-                  onClick={() => setRotation(prev => (prev + 90) % 360)}
-                  className="flex-none px-4 py-2 bg-gray-100 rounded-full text-sm font-medium flex items-center gap-2"
-                >
-                  <span>🔄</span> Rotate
-                </button>
-                <button
-                  onClick={() => setZoom(prev => Math.min(prev + 0.1, 3))}
-                  className="flex-none px-4 py-2 bg-gray-100 rounded-full text-sm font-medium flex items-center gap-2"
-                >
-                  <span>🔍</span> Zoom
-                </button>
-                <button
-                  onClick={() => setZoom(1)}
-                  className="flex-none px-4 py-2 bg-gray-100 rounded-full text-sm font-medium flex items-center gap-2"
-                >
-                  <span>↩️</span> Reset
-                </button>
+              {/* Quick Actions Bar with Zoom Indicator */}
+              <div className="bg-gray-900 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-white text-sm">Zoom: {Math.round(zoom * 100)}%</span>
+                  <button
+                    onClick={() => setZoom(1)}
+                    className="text-xs text-gray-400 hover:text-white transition-colors"
+                  >
+                    Reset
+                  </button>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setRotation(prev => (prev + 90) % 360)}
+                    className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-white text-sm font-medium 
+                             flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <span>🔄</span> Rotate
+                  </button>
+                  <button
+                    onClick={() => setZoom(prev => Math.max(prev - 0.1, 1))}
+                    className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-white text-sm font-medium 
+                             flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <span>➖</span>
+                  </button>
+                  <button
+                    onClick={() => setZoom(prev => Math.min(prev + 0.1, 3))}
+                    className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-white text-sm font-medium 
+                             flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <span>➕</span>
+                  </button>
+                </div>
               </div>
 
               {/* Simplified Mobile Controls */}
@@ -320,7 +357,7 @@ const PhotoEditor = () => {
                     selected={selectedDate}
                     onChange={(date) => setSelectedDate(date)}
                     dateFormat="yyyy/MM/dd"
-                    className="w-full py-3 px-4 border rounded-lg text-center"
+                    className="w-full py-3 px-4 border border-gray-700 rounded-lg bg-gray-800 text-white text-center"
                     wrapperClassName="w-full"
                   />
                 </div>
