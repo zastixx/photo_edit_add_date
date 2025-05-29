@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Edit Phtoto Add Datastamp",
+  title: "Edit Photo Add Data-stamp",
   description: "Edit your photos and add a datastamp easily made by zastixx aka Tarun",
 };
 
